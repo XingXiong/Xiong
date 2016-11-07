@@ -1,0 +1,60 @@
+---
+title: "Xiong_week_07"
+author: "Xing Xiong"
+date: "2016å¹?11æœ?7æ—?"
+output: html_document
+---
+
+Read the data first and do cleaning.If the value of Year is like "XX-XX",I select the year which is infront of the hyphen.
+```{r}
+library(tidyverse)
+library(stringr)
+health <- read_csv("C:/Users/Administrator/Desktop/wrangling hw/Xiong/xmart.csv")
+colnames(health) <- c("Country","Year","MMRatio","SKpersonnel")
+health$MMRatio <- str_replace_all(health$MMRatio," ","")
+health$lower_bound <- str_extract(health$MMRatio , "\\[[0-9]+")
+health$upper_bound <- str_extract(health$MMRatio , "[0-9]+\\]")
+health$MMRatio <- str_extract(health$MMRatio , "[0-9]+")
+health$lower_bound <- str_replace_all(health$lower_bound , "\\[" , "")
+health$upper_bound <- str_replace_all(health$upper_bound , "\\]" , "")
+health$Year <- str_extract(health$Year , "[0-9]+")
+health$Year <- as.numeric(health$Year)
+health$MMRatio <- as.numeric(health$MMRatio)
+health$lower_bound <- as.numeric(health$lower_bound)
+health$upper_bound <- as.numeric(health$upper_bound)
+```
+
+
+Read another data.Here I use the function is.na to jundge whether the value is NA.Merge the two dataframe and do plots.
+```{r}
+income <- read_csv("C:/Users/Administrator/Desktop/wrangling hw/Xiong/WHS9_93.csv",skip = 1)
+income1 <- income %>% 
+gather(2:25 , key = "Year" , value = "income")
+income1$income <- str_replace_all(income1$income," ","")
+income1$Year <- as.numeric(income1$Year)
+final <- merge(health , income1 , by = c("Country"="Country" , "Year"="Year"), all=TRUE)
+final <- filter(final,income != "NA")
+FINAL <- final[!(is.na(final$MMRatio)) | !(is.na(final$SKpersonnel)),]
+plot1 <- ggplot(data = FINAL, aes(x = income , y = MMRatio ,color = Year)) + geom_point()
+plot1
+plot2 <- ggplot(data = FINAL, aes(x = income , y = SKpersonnel ,color = Year)) + geom_point()
+plot2
+```
+
+Save the data into my selected file with the name I choose. 
+```{r}
+write.csv(FINAL,file="C:/Users/Administrator/Desktop/wrangling hw/Xiong/data.csv")
+```
+
+First,rank the value of the year in order to select the most recent one.And then form a subset which includes columns we want for the plot.Use function tolower to change the first letter of each country into lower-case letter.Then do the plot. 
+```{r}
+library(choroplethr)
+data1 <- FINAL %>% group_by(Country) %>% mutate(Rank = min_rank(Year)) %>% filter(Year == max(Year))
+forplot <- select(data1,Country,MMRatio)
+colnames(forplot) <- c("region","value")
+forplot$region <- tolower(forplot$region)
+plot3 <- country_choropleth(forplot , "Maternal Mortality Ratio" )
+plot3
+```
+
+Here I have a small question.When I first drew the plot2,R gave me a plot with colorful points.But when I ran the R markdown at last,R gave me a plot with drak colors just shown above.I tried to draw the beautiful plot once again but I failed .Why?
